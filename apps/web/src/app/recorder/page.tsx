@@ -91,7 +91,8 @@ export default function RecorderPage() {
         const opfsChunkIds = await getOPFSChunks()
         if (opfsChunkIds.length === 0) return
 
-        const res = await fetch("http://localhost:3000/api/chunks/sync-status", {
+        const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000"
+        const res = await fetch(`${SERVER_URL}/api/chunks/sync-status`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ chunkIds: opfsChunkIds }),
@@ -106,7 +107,8 @@ export default function RecorderPage() {
             const file = await getChunkFromOPFS(id)
             if (file) {
               const base64Data = await blobToBase64(file)
-              await fetch("http://localhost:3000/api/chunks/upload", {
+              const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000"
+              await fetch(`${SERVER_URL}/api/chunks/upload`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ chunkId: id, data: base64Data }),
