@@ -17,7 +17,7 @@ RUN bun install
 COPY . .
 
 # Build the server
-RUN bun run build --filter=server
+RUN cd apps/server && bun run build
 
 # Start the server
 WORKDIR /app/apps/server
