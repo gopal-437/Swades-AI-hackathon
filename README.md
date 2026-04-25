@@ -43,9 +43,9 @@ npm install
 
 ### Database Setup
 
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/server/.env` with your PostgreSQL connection details.
-3. Apply the schema:
+This project uses Neon (Serverless Postgres). 
+1. The connection is pre-configured or can be updated in `apps/server/.env` using the `DATABASE_URL` variable.
+2. Apply the schema:
 
 ```bash
 npm run db:push
@@ -119,7 +119,7 @@ k6 run load-test.js
 ## Project Structure
 
 ```
-recoding-assignment/
+swades-ai-hackathon/
 ├── apps/
 │   ├── web/         # Frontend (Next.js) — chunking, OPFS, upload logic
 │   └── server/      # Backend API (Hono) — bucket upload, DB ack

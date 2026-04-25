@@ -21,6 +21,25 @@ app.use(
 
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 
+// In-memory queue for batch processing
+const chunkQueue: { id: string; status: string }[] = [];
+
+// Background worker to flush queue every 1 second
+setInterval(async () => {
+  if (chunkQueue.length === 0) return;
+  
+  // Process up to 500 items at a time
+  const batch = chunkQueue.splice(0, 500);
+  
+  try {
+    await db.insert(chunks).values(batch).onConflictDoNothing();
+  } catch (error) {
+    console.error("Batch insert failed, re-queueing:", error);
+    // Put them back at the front of the queue to retry
+    chunkQueue.unshift(...batch);
+  }
+}, 1000);
+
 app.get("/", (c) => {
   return c.text("OK");
 });
@@ -39,11 +58,8 @@ app.post("/api/chunks/upload", async (c) => {
     // Simulate bucket upload (saving to local file system)
     await fs.writeFile(filePath, data);
 
-    // DB Acknowledgment
-    await db.insert(chunks).values({
-      id: chunkId,
-      status: "uploaded",
-    }).onConflictDoNothing();
+    // In-memory queue: eliminates DB network roundtrip from the hot path
+    chunkQueue.push({ id: chunkId, status: "uploaded" });
 
     return c.json({ success: true, chunkId });
   } catch (error) {

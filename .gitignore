@@ -5,3 +5,7 @@ dist/
 .next/
 build/
 coverage/
+apps/server/uploads/*
+k6-dir/
+k6.zip  
+ 
