@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { saveChunkToOPFS } from "../lib/opfs"
 
 const SAMPLE_RATE = 16000
 const BUFFER_SIZE = 4096
@@ -108,6 +109,7 @@ export function useRecorder(options: UseRecorderOptions = {}) {
       duration: merged.length / SAMPLE_RATE,
       timestamp: Date.now(),
     }
+    saveChunkToOPFS(chunk.id, blob).catch(console.error)
     setChunks((prev) => [...prev, chunk])
   }, [])
 
@@ -157,6 +159,7 @@ export function useRecorder(options: UseRecorderOptions = {}) {
             duration: merged.length / SAMPLE_RATE,
             timestamp: Date.now(),
           }
+          saveChunkToOPFS(chunk.id, blob).catch(console.error)
           setChunks((prev) => [...prev, chunk])
         }
       }

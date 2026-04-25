@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Download, Mic, Pause, Play, Square, Trash2 } from "lucide-react"
+import { getOPFSChunks, getChunkFromOPFS, deleteChunkFromOPFS, clearAllChunksFromOPFS, blobToBase64 } from "@/lib/opfs"
 
 import { Button } from "@my-better-t-app/ui/components/button"
 import {
@@ -76,8 +77,51 @@ function ChunkRow({ chunk, index }: { chunk: WavChunk; index: number }) {
 
 export default function RecorderPage() {
   const [deviceId] = useState<string | undefined>()
-  const { status, start, stop, pause, resume, chunks, elapsed, stream, clearChunks } =
+  const { status, start, stop, pause, resume, chunks, elapsed, stream, clearChunks: clearHookChunks } =
     useRecorder({ chunkDuration: 5, deviceId })
+
+  const clearChunks = useCallback(async () => {
+    clearHookChunks()
+    await clearAllChunksFromOPFS()
+  }, [clearHookChunks])
+
+  useEffect(() => {
+    const syncLoop = async () => {
+      try {
+        const opfsChunkIds = await getOPFSChunks()
+        if (opfsChunkIds.length === 0) return
+
+        const res = await fetch("http://localhost:3000/api/chunks/sync-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chunkIds: opfsChunkIds }),
+        })
+        const data = await res.json()
+        const statuses = data.statuses || {}
+
+        for (const id of opfsChunkIds) {
+          if (statuses[id] === true) {
+            await deleteChunkFromOPFS(id)
+          } else {
+            const file = await getChunkFromOPFS(id)
+            if (file) {
+              const base64Data = await blobToBase64(file)
+              await fetch("http://localhost:3000/api/chunks/upload", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chunkId: id, data: base64Data }),
+              })
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Sync loop error:", err)
+      }
+    }
+
+    const interval = setInterval(syncLoop, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   const isRecording = status === "recording"
   const isPaused = status === "paused"
